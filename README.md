@@ -14,17 +14,17 @@ Then install `PyTorch`, see [install guide](http://pytorch.org/).
 ## How to run it
 Download data and extract it to `DATA_DIR` according to your choice.
 
-Run [notebooks/tests.ipynb] to verify correct function of `parsing.py/polygon_to_mask()` and create data for unit testing of this method.
+Run [notebooks/tests.ipynb](notebooks/tests.ipynb) to verify correct function of `parsing.py/polygon_to_mask()` and create data for unit testing of this method.
 
 Run data pipline to preprocess data and split it to train/dev dataset.
 ```bash
 python scripts/prepare_data.py
 ```
 
-`DATA_DIR/dataset/` folder was created with `train/` and `dev/` subfolders containing preprocesses pickled examples prepared for training pipeline:
+`DATA_DIR/datasets/` folder was created with `train/` and `dev/` subfolders containing preprocessed pickled examples prepared for training pipeline:
 
 ```bash
-python scripts/train.py --train_dir DATA_DIR/dataset/train/ --dev_dir DATA_DIR/dataset//dev/ --exp exp01
+python scripts/train.py --train_dir DATA_DIR/datasets/train/ --dev_dir DATA_DIR/datasets/dev/ --exp exp01
 ```
 
 which starts training of the net and it stores experiment data to [experiments/exp01/](experiments/exp01/) folder.
@@ -35,7 +35,7 @@ which starts training of the net and it stores experiment data to [experiments/e
 How did you verify that you are parsing the contours correctly?
  - First I converted contours to mask by untested method for some random images 
  - Then I plotted corresponding dicom and mask images to verify that mask is correct for those random images [notebooks/tests.ipynb](notebooks/tests.ipynb)
- - I stored those verified masks to test it next time without manual verification
+ - I stored those verified masks for unit testing without manual verification
 
 What changes did you make to the code, if any, in order to integrate it into our production code base?
  - types in docstring 
