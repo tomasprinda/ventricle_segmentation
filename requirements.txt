@@ -1,0 +1,6 @@
+Pillow
+pytest
+numpy
+jupyter
+matplotlib
+pydicom

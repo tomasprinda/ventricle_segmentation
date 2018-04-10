@@ -1,0 +1,10 @@
+- DONE Add types to function parameters
+- DONE review variable names
+- DONE verification I am parsing data correctly
+  - DONE unit test, hand boolean mask
+- split code to modules
+  - parsing
+  - prepare_data?
+  - train
+  - eval
+- Logging
