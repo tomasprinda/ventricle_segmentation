@@ -1,0 +1,1 @@
+{"learning_rate": 0.001, "epochs": 100, "batch_size": 8, "workers": 5}

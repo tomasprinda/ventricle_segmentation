@@ -1,37 +1,52 @@
-import matplotlib
-
-from ventricle_segmentation.core import AnnotatedScan
-
-matplotlib.use('Agg')  # prevents _tkinter error
-import matplotlib.pyplot as plt
-import matplotlib.pylab as pl
-
 import csv
 import errno
-import importlib
+import json
 import os
 import pickle
 import shutil
 
+import matplotlib.pylab as pl
+# matplotlib.use('Agg')  # prevents _tkinter error
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import ListedColormap
 
+from ventricle_segmentation import cfg
+from ventricle_segmentation.core import AnnotatedScan
+
 
 def iou(mask1, mask2):
+    """
+    Intersection over union metric
+    :param np.ndarrary mask1:
+    :param np.ndarrary mask2:
+    :return float: Value of the metric
+    """
     mask1 = np.ravel(mask1)
     mask2 = np.ravel(mask2)
-    
+
     i = sum(mask1 & mask2)
     u = sum(mask1 | mask2)
+
     if u == 0:
         return 0.
+
     return i / u
+
+
+def get_epoch_loss(losses_weights):
+    """
+    Calculates average loss function for epoch
+    :param list[(float, int)] losses_weights: List of tuple with loss_values per batch and batch sizes
+    :return float: Average loss value
+    """
+    losses, weights = zip(*losses_weights)
+    return np.average(losses, weights=weights)
 
 
 def plot_annotated_scan(annotated_scan, plot_mask=True):
     """
     :param AnnotatedScan annotated_scan:
-    :return:
     """
     plt.figure(figsize=(12, 12))
     plt.imshow(annotated_scan.dicom_img.astype(float))
@@ -54,22 +69,21 @@ def plot_annotated_scan(annotated_scan, plot_mask=True):
 
 
 def prepare_exp_dir(exp_name, clean_dir):
-    exp_dir = cfg.EXPERIMENTS_DIR + exp_name + "/"
+    """
+    Prepare folder for experiment
+    :param str exp_name:
+    :param bool clean_dir:
+    """
+    cfg.EXP_DIR = os.path.join(cfg.EXPERIMENTS_DIR, exp_name + "/")
+    make_sure_path_exists(cfg.EXP_DIR)
     if clean_dir:
-        make_sure_path_exists(exp_dir)
-        clean_folder(exp_dir)
-    backup_files([__file__, ], exp_dir)
-    return exp_dir
-
-
-def get_class(module_path, class_name):
-    spec = importlib.util.spec_from_file_location("module.name", module_path)
-    foo = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(foo)
-    return getattr(foo, class_name)
+        clean_folder(cfg.EXP_DIR)
 
 
 def clean_folder(folder):
+    """
+    :param str folder:
+    """
     import os
     for the_file in os.listdir(folder):
         file_path = os.path.join(folder, the_file)
@@ -103,30 +117,6 @@ def make_sure_path_exists(path):
             raise
 
 
-def shuffle_pairs(a, b):
-    assert len(a) == len(b)
-    p = np.random.permutation(len(a))
-    return a[p], b[p]
-
-
-def batches(l, batch_size, shuffle=False):
-    """
-    :param list|np.ndarray l:
-    :param int batch_size:
-    :param bool shuffle:
-    """
-    if shuffle:
-        np.random.shuffle(l)
-    for i in range(0, len(l), batch_size):
-        yield l[i:i + batch_size]
-
-
-def unbatch(batches_):
-    for batch in batches_:
-        for example in batch:
-            yield example
-
-
 def json_load(filename):
     with open(filename, "r") as f:
         return json.load(f)
@@ -153,6 +143,12 @@ def csv_dump(rows, filename, append=False, delimiter=";"):
         writer = csv.writer(csvfile, delimiter=str(delimiter), quotechar=str('"'), quoting=csv.QUOTE_MINIMAL)
         rows = [list(row) for row in rows]  # Like copy, but converts inner tuples to lists
         writer.writerows(rows)
+
+
+def txt_dump(rows, filename, append=False):
+    open_param = 'a' if append else 'w'
+    with open(filename, open_param) as txtfile:
+        txtfile.writelines(rows)
 
 
 def strip_extension(filename):

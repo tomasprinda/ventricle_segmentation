@@ -2,9 +2,15 @@
 - DONE review variable names
 - DONE verification I am parsing data correctly
   - DONE unit test, hand boolean mask
-- split code to modules
+- DONE split code to modules
   - parsing
   - prepare_data?
   - train
   - eval
 - Logging
+- DONE Make sure I am connecting the correct dicom and icontours - DONE by test_poly_to_mask
+- DONE Comment and test utils
+- DONE check input output dimensions
+- DONE check loss value
+- DONE backup model, model_wrapper
+- DONE clean conf and train

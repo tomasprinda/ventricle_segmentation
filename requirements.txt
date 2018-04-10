@@ -4,3 +4,5 @@ numpy
 jupyter
 matplotlib
 pydicom
+click
+fcn>=6.1.5
