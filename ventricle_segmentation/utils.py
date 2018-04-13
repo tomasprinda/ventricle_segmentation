@@ -1,5 +1,6 @@
 import csv
 import errno
+import importlib
 import json
 import os
 import pickle
@@ -78,6 +79,13 @@ def prepare_exp_dir(exp_name, clean_dir):
     make_sure_path_exists(cfg.EXP_DIR)
     if clean_dir:
         clean_folder(cfg.EXP_DIR)
+
+
+def get_class(module_path, class_name):
+    spec = importlib.util.spec_from_file_location("module.name", module_path)
+    foo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(foo)
+    return getattr(foo, class_name)
 
 
 def clean_folder(folder):

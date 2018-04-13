@@ -63,13 +63,13 @@ class ModelWrapper:
 
             # train
             for i, batch in enumerate(train_loader):
-                loss_val, batch_size = self.eval_batch(batch, epoch, is_training=True)
+                loss_val, batch_size, _ = self.eval_batch(batch, epoch, is_training=True)
                 train_losses.append((loss_val, batch_size))
             train_loss = get_epoch_loss(train_losses)
 
             # eval
             for i, batch in enumerate(dev_loader):
-                loss_val, batch_size = self.eval_batch(batch, epoch, is_training=False)
+                loss_val, batch_size, _ = self.eval_batch(batch, epoch, is_training=False)
                 dev_losses.append((loss_val, batch_size))
             dev_loss = get_epoch_loss(dev_losses)
 
@@ -80,6 +80,21 @@ class ModelWrapper:
 
             # log
             self.log_epoch(epoch, train_loss, dev_loss, is_best)
+
+    def predict(self, dataset_dir):
+        self.get_model()
+        self.load_checkpoint(cfg.EXP_DIR + "best.pth.tar")
+
+        # Dataset loader
+        dataset = ScansDataset(dataset_dir)
+        dataset_loader = torch.utils.data.DataLoader(
+            dataset, batch_size=self.conf["batch_size"], shuffle=False, num_workers=self.conf["workers"], pin_memory=True
+        )
+
+        for i, batch in enumerate(dataset_loader):
+            _, _, prediction = self.eval_batch(batch, epoch=None, is_training=False)
+
+
 
     def eval_batch(self, batch, epoch, is_training):
         """
@@ -110,7 +125,9 @@ class ModelWrapper:
         # return
         loss_val = loss.data.cpu().numpy()[0]
         batch_size = len(dicom_file)
-        return loss_val, batch_size
+        print(prediction)
+        prediction = prediction > 0.5
+        return loss_val, batch_size, prediction
 
     def log_epoch(self, epoch, train_loss, dev_loss, is_best):
         """
