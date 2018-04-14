@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class AnnotatedScan:
     """
     Dataset example holder
@@ -14,6 +17,8 @@ class AnnotatedScan:
         self.dicom_file = dicom_file
         self.imask = imask
         self.omask = omask
+
+        self.imask_prediction = None  # type: np.ndarray|None # dtype=bool i/o-contour boolean mask
 
 
 class ContourMask:
