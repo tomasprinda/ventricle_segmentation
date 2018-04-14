@@ -29,9 +29,9 @@ class ScansDataset(data.Dataset):
         dicom_img = (annotated_scan.dicom_img.astype(np.float32) - 500) / 1000
         dicom_img = np.expand_dims(dicom_img, 0)  # adding channel at dimension 0, required dims in batch (N,C_in,H_in,W_in); N is not present yet
 
-        imask = annotated_scan.imask.astype(np.int64)
+        imask = annotated_scan.imask.mask.astype(np.int64)
 
-        return dicom_img, imask, annotated_scan.dicom_file, annotated_scan.icontours_file
+        return dicom_img, imask, annotated_scan.dicom_file, annotated_scan.imask.contours_file
 
     def __len__(self):
         return len(self.scan_pkl_files)

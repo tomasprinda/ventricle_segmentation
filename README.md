@@ -29,8 +29,9 @@ python scripts/train.py --train_dir DATA_DIR/datasets/train/ --dev_dir DATA_DIR/
 
 which starts training of the net and it stores experiment data to [experiments/exp01/](experiments/exp01/) folder.
 
+## Phase 01
 
-## Answers to questions
+### Answers to questions
 
 How did you verify that you are parsing the contours correctly?
  - First I converted contours to mask by untested method for some random images 
@@ -63,7 +64,15 @@ Given the pipeline you have built, can you see any deficiencies that you would c
  - Automatic hyperparameter tuning
  - Better logging
  
-## Notes
+### Notes
  - The aim of this project was to prepare data for training and create training pipeline. Training phase has not been tuned. 
  More images would probably be neccessary.
+ 
+## Phase 2
+
+### Answers to questions
+
+After building the pipeline, please discuss any changes that you made to the pipeline you built in Phase 1, and why you made those changes.
+
+ 
  
