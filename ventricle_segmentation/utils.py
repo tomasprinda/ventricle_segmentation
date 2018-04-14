@@ -34,6 +34,26 @@ def iou(mask1, mask2):
     return i / u
 
 
+def get_pixel_intensities(scans, norm_scan_intenities):
+    blood_pool_intensities, heart_muscle_intensities = [], []
+
+    for scan in scans:
+        #         plot_annotated_scan(scan)
+
+        blood_pool_mask = scan.imask.mask
+        heart_muscle_mask = scan.omask.mask > scan.imask.mask
+
+        dicom_img = scan.dicom_img.astype(float)
+        if norm_scan_intenities:
+            dicom_img -= dicom_img[scan.omask.mask].min()
+            dicom_img /= dicom_img[scan.omask.mask].max()
+
+        blood_pool_intensities += dicom_img[blood_pool_mask].tolist()
+        heart_muscle_intensities += dicom_img[heart_muscle_mask].tolist()
+
+    return blood_pool_intensities, heart_muscle_intensities
+
+
 def get_epoch_loss(losses_weights):
     """
     Calculates average loss function for epoch
