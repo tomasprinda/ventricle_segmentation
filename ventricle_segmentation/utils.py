@@ -49,23 +49,33 @@ def plot_annotated_scan(annotated_scan, plot_mask=True):
     :param AnnotatedScan annotated_scan:
     """
     plt.figure(figsize=(12, 12))
-    plt.imshow(annotated_scan.dicom_img.astype(float))
+    plt.imshow(annotated_scan.dicom_img.astype(float), cmap=pl.cm.hot)
     if plot_mask:
-        plt.figure(figsize=(12, 12))
-        plt.imshow(annotated_scan.dicom_img.astype(float))
-        # Choose colormap
-        cmap = pl.cm.Reds
+        if annotated_scan.imask is not None:
+            plot_contour_mask(annotated_scan.dicom_img, annotated_scan.imask, cmap=pl.cm.Blues)
+        if annotated_scan.omask is not None:
+            plot_contour_mask(annotated_scan.dicom_img, annotated_scan.omask, cmap=pl.cm.Greens)
+    plt.title("\n".join([
+        annotated_scan.dicom_file,
+        annotated_scan.imask.contours_file if annotated_scan.imask else "no imask",
+        annotated_scan.omask.contours_file if annotated_scan.omask else "no omask"
+    ]))
 
-        # Get the colormap colors
-        my_cmap = cmap(np.arange(cmap.N))
 
-        # Set alpha
-        my_cmap[:, -1] = np.linspace(0, 1, cmap.N)
+def plot_contour_mask(dicom_img, contour_mask, cmap):
+    # plt.figure(figsize=(12, 12))
+    # plt.imshow(dicom_img.astype(float), cmap=pl.cm.hot)
 
-        # Create new colormap
-        my_cmap = ListedColormap(my_cmap)
+    # Get the colormap colors
+    my_cmap = cmap(np.arange(cmap.N))
 
-        plt.imshow(annotated_scan.imask.astype(float) / 4, cmap=my_cmap, alpha=.5)
+    # Set alpha
+    my_cmap[:, -1] = np.linspace(0, 1, cmap.N)
+
+    # Create new colormap
+    my_cmap = ListedColormap(my_cmap)
+
+    plt.imshow(contour_mask.mask.astype(float) / 4, cmap=my_cmap, alpha=.5)
 
 
 def prepare_exp_dir(exp_name, clean_dir):

@@ -1,10 +1,16 @@
 import unittest
 
 import os
+from pprint import pprint
+
+import matplotlib
+matplotlib.use('Agg')  # prevents _tkinter error
+import matplotlib.pyplot as plt
 
 from ventricle_segmentation import cfg
-from ventricle_segmentation.parsing import parse_dicom_file, np, polygon_to_mask, parse_contour_file, load_all_scans
-from ventricle_segmentation.utils import print_info, pickle_load, iou
+from ventricle_segmentation.core import AnnotatedScan, ContourMask
+from ventricle_segmentation.parsing import parse_dicom_file, np, polygon_to_mask, parse_contour_file, load_all_scans, get_contour_mask
+from ventricle_segmentation.utils import print_info, pickle_load, iou, prepare_exp_dir, csv_dump, plot_annotated_scan
 
 
 class TestParsing(unittest.TestCase):
@@ -24,30 +30,89 @@ class TestParsing(unittest.TestCase):
             dicom_img = parse_dicom_file(dicom_file)
             self.assertIsInstance(dicom_img, np.ndarray)
 
-    def test_poly_to_mask(self):
-        for test_mask_file in os.listdir(cfg.TEST_MASKS_DIR):
+    def test_get_contour_mask(self):
+        test_files = list(os.listdir(cfg.TEST_MASKS_DIR))
+
+        # Test if some test images
+        self.assertGreater(len(test_files), 0)
+
+        for test_mask_file in test_files:
             test_mask_file = os.path.join(cfg.TEST_MASKS_DIR, test_mask_file)
-            expected_annotated_scan = pickle_load(test_mask_file)
+            expected_annotated_scan = pickle_load(test_mask_file)  # type: AnnotatedScan
 
-            expected_mask = expected_annotated_scan.imask
+            # Test masks
+            masks_dict = {"imask": expected_annotated_scan.imask, "omask": expected_annotated_scan.omask}
+            for mask_type, expected_mask in masks_dict.items():
+                if expected_mask is not None:
+                    shape = expected_annotated_scan.dicom_img.shape
+                    imask = get_contour_mask(expected_mask.contours_file, shape)
 
-            contours = parse_contour_file(expected_annotated_scan.icontours_file)
-            mask = polygon_to_mask(contours, *expected_mask.shape)
+                    self.assertEqual(imask.mask.tolist(), expected_mask.mask.tolist(), mask_type)
+                    self.assertEqual(imask.contours_file, expected_mask.contours_file, mask_type)
+                else:
+                    self.assertIsNone(expected_mask, mask_type)
 
-            result = iou(mask, expected_mask)
-            expected_result = 1
-            tolerance = 0.05
+        non_existing_path = "/not/existing/file.txt"
+        mask = get_contour_mask(non_existing_path, (100, 100))
+        self.assertIsNone(mask)
 
-            self.assertLess(abs(result - expected_result), tolerance)
+    def test_imask_inside_omask(self):
+        prepare_exp_dir("test_imask_inside_omask", clean_dir=True)
+        i_wrong = 0
+
+        tolerance = 0.001
+        wrong_scores = []
+        for annotated_scan in load_all_scans(cfg.LINKS_FILE, cfg.DICOMS_DIR, cfg.CONTOURS_DIR):
+
+            if annotated_scan.imask is None or annotated_scan.omask is None:
+                continue  # Skip if some mask not available
+
+            wrong_pixels = annotated_scan.imask.mask > annotated_scan.omask.mask
+            wrong_pixels = np.mean(np.ravel(wrong_pixels))
+
+            # Plot incorrect data
+            if wrong_pixels > tolerance:
+                i_wrong += 1
+                row = [i_wrong, wrong_pixels, annotated_scan.dicom_file, annotated_scan.imask.contours_file, annotated_scan.omask.contours_file]
+                csv_dump([row], os.path.join(cfg.EXP_DIR, "wrong_files.csv"), append=True)
+                plot_annotated_scan(annotated_scan)
+                plt.savefig(os.path.join(cfg.EXP_DIR, "{}.png".format(i_wrong)))
+                plt.clf()
+
+            wrong_scores.append(wrong_pixels)
+
+        # Test it
+        for wrong_pixels in wrong_scores:
+            self.assertLess(wrong_pixels, tolerance)
 
     def test_load_all_scans(self):
-        annotated_scans = list(load_all_scans(cfg.LINKS_FILE, cfg.DICOMS_DIR, cfg.CONTOURS_DIR, n=20))
+        n = 20
+        annotated_scans = list(load_all_scans(cfg.LINKS_FILE, cfg.DICOMS_DIR, cfg.CONTOURS_DIR, n=n))
+
+        # Test if some test images
+        self.assertEqual(len(annotated_scans), n)
+
         for annotated_scan in annotated_scans:
-            self.assertIsInstance(annotated_scan.imask, np.ndarray)
+
+            imask_loaded = isinstance(annotated_scan.imask, ContourMask)
+            omask_loaded = isinstance(annotated_scan.omask, ContourMask)
+            self.assertTrue(imask_loaded or omask_loaded)
+
             self.assertIsInstance(annotated_scan.dicom_img, np.ndarray)
-            self.assertTupleEqual(annotated_scan.dicom_img.shape, annotated_scan.imask.shape)
 
+            if imask_loaded:
+                self.assertTupleEqual(annotated_scan.dicom_img.shape, annotated_scan.imask.mask.shape)
+                self.assertIsInstance(annotated_scan.imask.contours_file, str)
+                self.assertNotEqual(annotated_scan.imask.contours_file, "")
+            else:
+                self.assertIsNone(annotated_scan.imask)
 
+            if omask_loaded:
+                self.assertTupleEqual(annotated_scan.dicom_img.shape, annotated_scan.omask.mask.shape)
+                self.assertIsInstance(annotated_scan.omask.contours_file, str)
+                self.assertNotEqual(annotated_scan.omask.contours_file, "")
+            else:
+                self.assertIsNone(annotated_scan.omask)
 
 
 if __name__ == '__main__':

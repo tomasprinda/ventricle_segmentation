@@ -8,7 +8,7 @@ import pydicom
 from PIL import Image, ImageDraw
 from pydicom.errors import InvalidDicomError
 
-from ventricle_segmentation.core import AnnotatedScan
+from ventricle_segmentation.core import AnnotatedScan, ContourMask
 
 
 def load_all_scans(links_file, dicoms_dir, contours_dir, n=None):
@@ -24,10 +24,16 @@ def load_all_scans(links_file, dicoms_dir, contours_dir, n=None):
     i = 0
     for (dicom_id, contours_id) in parse_links_file(links_file):
 
-        dicom_patients_dir = os.path.join(dicoms_dir, dicom_id)
-        contour_patients_dir = os.path.join(contours_dir, contours_id, "i-contours")
+        if dicom_id == "SCD0000501":
+            # o-contours failed TestParsing.test_imask_inside_omask().
+            # See experiments/test_imask_inside_omask_without_skipping
+            continue
 
-        for annotated_scan in load_patient_scans(dicom_patients_dir, contour_patients_dir):
+        dicom_patients_dir = os.path.join(dicoms_dir, dicom_id)
+        icontour_patients_dir = os.path.join(contours_dir, contours_id, "i-contours")
+        ocontour_patients_dir = os.path.join(contours_dir, contours_id, "o-contours")
+
+        for annotated_scan in load_patient_scans(dicom_patients_dir, icontour_patients_dir, ocontour_patients_dir):
 
             if n is not None and i >= n:
                 return
@@ -53,30 +59,67 @@ def parse_links_file(filename):
     return links_lst
 
 
-def load_patient_scans(dicom_patient_dir, icontour_patient_dir):
+pattern_dicom = re.compile("^(\d+)\.dcm")
+
+
+def load_patient_scans(dicom_patient_dir, icontour_patient_dir, ocontour_patient_dir):
     """
-    Loads contours from icontour_patient_dir and loads also corresponding dicom images for annotations from dicom_patient_dir.
+    Loads dicom files with corresponding i-contours and o-contours files if at least one of the contours exists
+    for the dicom file.
     Make sure dicom_patient_dir matches icontour_patient_dir (by link.csv)
 
     :param str dicom_patient_dir: dir containing dicom files {:d}.dcm files
-    :param icontour_patient_dir: dir contating contour files IM-0001-{:04d}-icontour-manual.txt
+    :param str icontour_patient_dir: dir contating i-contour files IM-0001-{:04d}-icontour-manual.txt
+    :param str ocontour_patient_dir: dir contating o-contour files IM-0001-{:04d}-ocontour-manual.txt
     :return list[AnnotatedScan]: iterable
     """
-    pattern = re.compile("^IM-0001-(\d+)-icontour-manual\.txt")
-    for icontour_file in os.listdir(icontour_patient_dir):
-        match = pattern.match(icontour_file)
-        icontour_file = os.path.join(icontour_patient_dir, icontour_file)
+
+    for dicom_file in os.listdir(dicom_patient_dir):
+        match = pattern_dicom.match(dicom_file)
 
         if match:  # Correct icontour file
+
             dicom_nr = int(match.group(1))
-            dicom_file = os.path.join(dicom_patient_dir, "{}.dcm".format(dicom_nr))
-            dicom_img = parse_dicom_file(dicom_file)
+            dicom_file = os.path.join(dicom_patient_dir, dicom_file)
+            icontour_file = os.path.join(icontour_patient_dir, "IM-0001-{:04d}-icontour-manual.txt".format(dicom_nr))
+            ocontour_file = os.path.join(ocontour_patient_dir, "IM-0001-{:04d}-ocontour-manual.txt".format(dicom_nr))
 
-            contours = parse_contour_file(icontour_file)
-            imask = polygon_to_mask(contours, *dicom_img.shape)
+            if not os.path.isfile(icontour_file) and not os.path.isfile(ocontour_file):
+                continue  # Don't load when no annotation data
 
-            annotated_scan = AnnotatedScan(dicom_img, imask, dicom_file, icontour_file)
+            annotated_scan = load_annotated_scan(dicom_file, icontour_file, ocontour_file)
             yield annotated_scan
+
+
+def load_annotated_scan(dicom_file, icontour_file, ocontour_file):
+    """
+    Loads AnnotatedScan from dicom and i/o-contours files.
+    If i/o-contours files deosn't exists, AnnotatedScan.imask/omask is None
+    :param str dicom_file: Path to dicom file
+    :param str icontour_file: Path to icontour file (might not exists)
+    :param str ocontour_file: Path to icontour file (might not exists)
+    :return AnnotatedScan :
+    """
+    dicom_img = parse_dicom_file(dicom_file)
+    imask = get_contour_mask(icontour_file, dicom_img.shape)
+    omask = get_contour_mask(ocontour_file, dicom_img.shape)
+
+    return AnnotatedScan(dicom_img, dicom_file, imask, omask)
+
+
+def get_contour_mask(contour_file, shape):
+    """
+    Loads contours file and converts it to mask
+    :param str contour_file: Contours file to load
+    :param (int, int) shape: Size of mask to create == size of a dicom file
+    :return ContourMask|None: Returns None if file doesn't exists
+    """
+    if not os.path.isfile(contour_file):
+        return None
+
+    contours = parse_contour_file(contour_file)
+    mask = polygon_to_mask(contours, *shape)
+    return ContourMask(mask, contour_file)
 
 
 def parse_contour_file(filename):
@@ -146,4 +189,3 @@ def polygon_to_mask(polygon, width, height):
     ImageDraw.Draw(img).polygon(xy=polygon, outline=0, fill=1)
     mask = np.array(img).astype(bool)
     return mask
-
