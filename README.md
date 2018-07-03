@@ -12,7 +12,7 @@ python setup.py develop
 Then install `PyTorch`, see [install guide](http://pytorch.org/).
 
 ## How to run it
-Download data and extract it to `DATA_DIR` according to your choice.
+Download data and extract it to [`DATA_DIR`](/ventricle_segmentation/cfg.py#L3) according to your choice.
 
 Run [notebooks/tests.ipynb](notebooks/tests.ipynb) to verify correct function of `parsing.py/polygon_to_mask()` and create data for unit testing of this method.
 
