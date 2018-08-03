@@ -25,7 +25,7 @@ python scripts/prepare_data.py
 
 `DATA_DIR/datasets/` folder was created with `train/` and `dev/` subfolders containing preprocessed pickled examples prepared for training pipeline.
 
-*Run [/scripts/train.py](train.py) to train the model.*
+**Run [/scripts/train.py](train.py) to train the model.**
 ```bash
 python scripts/train.py --train_dir DATA_DIR/datasets/train/ --dev_dir DATA_DIR/datasets/dev/ --exp exp01
 ```
