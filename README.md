@@ -1,6 +1,8 @@
 # Ventricle Segmentation Coding Challenge
 
-Creating data pipeline and training pipeline for  left ventricular blood pool  (myocardium) semantic segmentation from DICOM MRI images left.  
+Creating data pipeline and training pipeline for left ventricular blood pool  (myocardium) semantic segmentation from DICOM MRI images left.
+
+Created for the purpose of the interview, focused on creating machine learning pipeline to train and evaluate the model. The purpose is not to make best performing / fast model.
 
 ## Install
 Project is organized as a python package. So first you should install it, best with development mode.
@@ -16,17 +18,17 @@ Download data and extract it to [`DATA_DIR`](/ventricle_segmentation/cfg.py#L3) 
 
 Run [notebooks/tests.ipynb](notebooks/tests.ipynb) to verify correct function of `parsing.py/polygon_to_mask()` and create data for unit testing of this method.
 
-Run data pipline to preprocess data and split it to train/dev dataset.
+Run [scripts/prepare_data.py](prepare_data.py) data pipline to preprocess data and split it to train/dev dataset.
 ```bash
 python scripts/prepare_data.py
 ```
 
-`DATA_DIR/datasets/` folder was created with `train/` and `dev/` subfolders containing preprocessed pickled examples prepared for training pipeline:
+`DATA_DIR/datasets/` folder was created with `train/` and `dev/` subfolders containing preprocessed pickled examples prepared for training pipeline.
 
+*Run [/scripts/train.py](train.py) to train the model.*
 ```bash
 python scripts/train.py --train_dir DATA_DIR/datasets/train/ --dev_dir DATA_DIR/datasets/dev/ --exp exp01
 ```
-
 which starts training of the net and it stores experiment data to [experiments/exp01/](experiments/exp01/) folder.
 
 ## Phase 01
